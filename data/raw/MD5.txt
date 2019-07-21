@@ -1,0 +1,11 @@
+test_set.zip
+md5:8402af5d137ef40a2888c1011ef3fe7e 	43.5 MB
+
+test_set_pixel_size.csv
+md5:8476dc198cc6542f26c57e87faeee033 	9.1 kB
+
+training_set.zip
+md5:00eb8198b9a505b2b3a6dfc740382497 	132.9 MB
+
+training_set_pixel_size_and_HC.csv
+md5:c0761518fece2bd2d2ad4218f2cd9777 	33.7 kB
