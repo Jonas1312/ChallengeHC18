@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 
 
-def opencv_fitEllipse(binary_mask, method="Simple"):
+def opencv_fitEllipse(binary_mask, method="Direct"):
+
     points = np.argwhere(binary_mask > 0.5)
 
     if method == "AMS":
@@ -19,14 +20,13 @@ def opencv_fitEllipse(binary_mask, method="Simple"):
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
 
     def main():
-        import matplotlib.pyplot as plt
-
         img = np.load("./output_samples/3.npy")
         (xx, yy), (MA, ma), angle = opencv_fitEllipse(img)
 
-        draw = np.zeros((*img.shape, 3))
+        draw = np.zeros((*img.shape, 3), dtype=np.uint8)
 
         draw[img > 0.5] = (255,) * 3
 

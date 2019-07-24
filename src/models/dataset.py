@@ -39,7 +39,7 @@ def default_loader(path):
 def make_dataset(directory):
     images = os.listdir(directory)
 
-    images = [x for x in images if x.lower().endswith("hc.png")]
+    images = sorted([x for x in images if x.lower().endswith("hc.png")])
 
     assert len(images) == 999
 
@@ -124,15 +124,21 @@ class SegmentationDataset(data.Dataset):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    dataset = SegmentationDataset(
-        "../../data/raw/training_set/", input_size=(216, 320), random_transforms=True
-    )
-    print(len(dataset))
-    for i in range(len(dataset)):
-        img_, mask_ = dataset[i]
-        print(img_.size())
-        print(mask_.size())
-        plt.imshow(img_[0, :, :])
-        plt.figure()
-        plt.imshow(mask_[0, :, :])
-        plt.show()
+    def main():
+        dataset = SegmentationDataset(
+            "../../data/raw/training_set/",
+            input_size=(216, 320),
+            random_transforms=True,
+        )
+        print(len(dataset))
+        for i in range(len(dataset)):
+            img_, mask_ = dataset[i]
+            print(img_.size())
+            print(mask_.size())
+            plt.imshow(img_[0, :, :])
+            plt.figure()
+            plt.imshow(mask_[0, :, :])
+            plt.show()
+
+    if __name__ == "__main__":
+        main()
