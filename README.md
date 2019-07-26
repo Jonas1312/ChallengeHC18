@@ -27,3 +27,12 @@ The results should be submitted as a csv file which contains 6 columns and 336 r
 **filename,center_x_mm,center_y_mm,semi_axes_a_mm,semi_axes_b_mm,angle_rad**
 
 <img src="https://hc18.grand-challenge.org/media/HC18/public_html/GrandChallangeValues_90xwKFs.png" alt="Illustration" width="600"/>
+
+
+## Scores updates
+
+| Date  | Model             | LB score     | Rank    | Solution                                         | weight_name                                           |
+| ----- | ----------------- | ------------ | ------- | ------------------------------------------------ | ----------------------------------------------------- |
+| 21/07 | First commit      | x            | x       |                                                  | x                                                     |
+| 25/07 | UNet<br>Batchnorm | 5.99 ± 11.26 | 554/848 | SGD<br>5 epochs<br>no lr scheduling<br>dice loss | UNet1_loss=0.63_SGD_ep=5_(216, 320)                   |
+| 26/07 | UNet<br>Batchnorm | 4.26 ± 7.58  | 511/850 | SGD<br>25 epochs<br>multistepLR<br>dice loss     | UNet1_dice=0.4405_SGD_ep=29_(216, 320)_wd=0_dice_loss |
