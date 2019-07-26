@@ -3,9 +3,9 @@ import os
 import numpy as np
 import torch
 
-from architectures.unet import UNet as Model
+from architectures.unet1 import UNet1 as Model
 from dataset import SegmentationDataset
-from losses import dice_loss
+from losses import dice_coeff, focal_loss
 
 
 def train(model, device, train_loader, optimizer, epoch, scheduler=None):
@@ -19,8 +19,9 @@ def train(model, device, train_loader, optimizer, epoch, scheduler=None):
 
         output = model(data)
 
-        loss = dice_loss(output, target)
-        epoch_loss += loss.item() * len(data)
+        loss = focal_loss(output, target, reduction="sum")
+        epoch_loss += loss.item()
+        loss = loss / len(data)
 
         optimizer.zero_grad()
         loss.backward()
@@ -51,25 +52,24 @@ def train(model, device, train_loader, optimizer, epoch, scheduler=None):
 def validate(model, device, test_loader):
     model.eval()
     test_loss = 0
+    test_dice = 0
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += dice_loss(output, target, smooth=0.0).item() * len(data)
+            test_loss += focal_loss(output, target, reduction="sum").item()
+            test_dice += dice_coeff(output, target, reduction="sum").item()
 
     test_loss /= len(test_loader.dataset)
-    print(
-        "Test set: Average score: {:.6f} (loss: {:.6f})".format(
-            1.0 - test_loss, test_loss
-        )
-    )
-    return test_loss
+    test_dice /= len(test_loader.dataset)
+    print("Test set: Average score: {:.6f} (loss: {:.6f})".format(test_dice, test_loss))
+    return test_loss, test_dice
 
 
-def checkpoint(model, test_loss, optimizer, epoch, input_size, weight_decay, infos=""):
-    file_name = "{}_loss={:.2f}_{}_ep={}_{}_wd={}_{}.pth".format(
-        Model.__name__,
-        test_loss,
+def checkpoint(model, test_dice, optimizer, epoch, input_size, weight_decay, infos=""):
+    file_name = "{}_dice={:.3f}_{}_ep={}_{}_wd={}_{}.pth".format(
+        model.__class__.__name__,
+        test_dice,
         optimizer.__class__.__name__,
         epoch,
         input_size,
@@ -77,7 +77,7 @@ def checkpoint(model, test_loss, optimizer, epoch, input_size, weight_decay, inf
         infos,
     )
     path = os.path.join("../../models/", file_name)
-    if test_loss < 0.7 and not os.path.isfile(path):
+    if test_dice > 0.43 and not os.path.isfile(path):
         torch.save(model.state_dict(), path)
         print("Saved: ", file_name)
 
@@ -108,17 +108,13 @@ def main():
     # Datasets
     train_set = torch.utils.data.Subset(
         SegmentationDataset(
-            "../../data/raw/training_set/",
-            input_size=input_size,
-            random_transforms=True,
+            "../../data/raw/training_set/", input_size=input_size, train_mode=True
         ),
         train_indices,
     )
     test_set = torch.utils.data.Subset(
         SegmentationDataset(
-            "../../data/raw/training_set/",
-            input_size=input_size,
-            random_transforms=False,
+            "../../data/raw/training_set/", input_size=input_size, train_mode=True
         ),
         test_indices,
     )
@@ -150,11 +146,12 @@ def main():
     print("Optimizer: ", optimizer.__class__.__name__)
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=[4, 6], gamma=0.1
+        optimizer, milestones=[10, 15, 20, 25, 30], gamma=0.1
     )
 
     train_loss_history = list()
     test_loss_history = list()
+    test_dice_history = list()
 
     for epoch in range(1, epochs + 1):
         print("################## EPOCH {}/{} ##################".format(epoch, epochs))
@@ -163,21 +160,28 @@ def main():
             print("Current learning rate:", param_group["lr"])
 
         train_loss = train(model, device, train_loader, optimizer, epoch)
-        test_loss = validate(model, device, test_loader)
+        test_loss, test_dice = validate(model, device, test_loader)
 
         scheduler.step()
 
         # Save model
-        if epoch > 1 and test_loss < min(test_loss_history):
+        if epoch > 1 and test_dice > max(test_dice_history):
             checkpoint(
-                model, test_loss, optimizer, epoch, input_size, weight_decay, infos=""
+                model,
+                test_dice,
+                optimizer,
+                epoch,
+                input_size,
+                weight_decay,
+                infos="dice_loss",
             )
 
         train_loss_history.append(train_loss)
         test_loss_history.append(test_loss)
+        test_dice_history.append(test_dice)
 
         # # Save history at each epoch (overwrite previous history)
-        history = [train_loss_history, test_loss_history]
+        history = [train_loss_history, test_loss_history, test_dice_history]
         np.save("history.npy", np.array(history))
 
 
