@@ -5,7 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class UNet(nn.Module):
+class UNet1(nn.Module):
     def __init__(
         self,
         in_channels=1,
@@ -40,7 +40,7 @@ class UNet(nn.Module):
                            learned upsampling.
                            'upsample' will use bilinear upsampling.
         """
-        super(UNet, self).__init__()
+        super().__init__()
         assert up_mode in ("upconv", "upsample")
         self.padding = padding
         self.depth = depth
@@ -72,7 +72,7 @@ class UNet(nn.Module):
         for i, up in enumerate(self.up_path):
             x = up(x, blocks[-i - 1])
 
-        return torch.sigmoid(self.last(x))
+        return self.last(x)
 
 
 class UNetConvBlock(nn.Module):
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = UNet(
+    model = UNet1(
         in_channels=1,
         n_classes=1,
         depth=4,
