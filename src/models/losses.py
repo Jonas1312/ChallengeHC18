@@ -30,7 +30,7 @@ def dice_coeff(pred, target, smooth=0.0, reduction="mean"):
 
 
 def bce_loss(pred, target, reduction="mean"):
-    """Balanced cross entropy"""
+    """Balanced binary cross entropy"""
     beta = (1 - target).sum() / target.numel()
     loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
     loss = (beta * target + (1 - beta) * (1 - target)) * loss
@@ -41,6 +41,12 @@ def bce_loss(pred, target, reduction="mean"):
     if reduction == "sum":
         return loss_per_sample.sum()
     return loss_per_sample
+
+
+def bce_dice_loss(pred, target, reduction="mean"):
+    return bce_loss(pred, target, reduction=reduction) + dice_loss(
+        pred, target, reduction=reduction
+    )
 
 
 def focal_loss(pred, target, gamma=2, reduction="mean"):
