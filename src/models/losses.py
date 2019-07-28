@@ -4,13 +4,6 @@ from torch.nn import functional as F
 EPS = 1e-7
 
 
-def dice_loss(pred, target, smooth=1.0, reduction="mean"):
-    dice = dice_coeff(pred, target, smooth=smooth, reduction=reduction)
-    if reduction == "sum":
-        return pred.size(0) - dice
-    return 1 - dice
-
-
 def dice_coeff(pred, target, smooth=0.0, reduction="mean"):
     pred = torch.sigmoid(pred)
 
@@ -29,18 +22,51 @@ def dice_coeff(pred, target, smooth=0.0, reduction="mean"):
     return dice
 
 
+def dice_loss(pred, target, smooth=1.0, reduction="mean"):
+    dice_per_image = dice_coeff(pred, target, smooth=smooth, reduction=None)
+    loss_per_image = 1.0 - dice_per_image
+    if reduction == "mean":
+        return loss_per_image.mean()
+    if reduction == "sum":
+        return loss_per_image.sum()
+    return loss_per_image
+
+
+def log_dice_loss(pred, target, smooth=1.0, reduction="mean"):
+    loss_per_image = -torch.log(dice_coeff(pred, target, smooth=smooth, reduction=None))
+    if reduction == "mean":
+        return loss_per_image.mean()
+    if reduction == "sum":
+        return loss_per_image.sum()
+    return loss_per_image
+
+
 def bce_loss(pred, target, reduction="mean"):
     """Balanced binary cross entropy"""
     beta = (1 - target).sum() / target.numel()
-    loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
-    loss = (beta * target + (1 - beta) * (1 - target)) * loss
+    loss = F.binary_cross_entropy_with_logits(pred, target, reduction=None)
+    loss = (beta.sqrt() * target + (1 - beta).sqrt() * (1 - target)) * loss
 
-    loss_per_sample = loss.mean(dim=(1, 2, 3))
+    loss_per_image = loss.mean(dim=(1, 2, 3))
     if reduction == "mean":
-        return loss_per_sample.mean()
+        return loss_per_image.mean()
     if reduction == "sum":
-        return loss_per_sample.sum()
-    return loss_per_sample
+        return loss_per_image.sum()
+    return loss_per_image
+
+
+def focal_loss(pred, target, gamma=2, reduction="mean"):
+    y_hat = torch.sigmoid(pred)
+
+    loss = F.binary_cross_entropy_with_logits(pred, target, reduction=None)
+    loss = ((1 - y_hat) ** gamma * target + (y_hat) ** gamma * (1 - target)) * loss
+
+    loss_per_image = loss.mean(dim=(1, 2, 3))
+    if reduction == "mean":
+        return loss_per_image.mean()
+    if reduction == "sum":
+        return loss_per_image.sum()
+    return loss_per_image
 
 
 def bce_dice_loss(pred, target, reduction="mean"):
@@ -49,34 +75,71 @@ def bce_dice_loss(pred, target, reduction="mean"):
     )
 
 
-def focal_loss(pred, target, gamma=2, reduction="mean"):
-    y_hat = torch.sigmoid(pred)
-    loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
-    loss = ((1 - y_hat) ** gamma * target + (y_hat) ** gamma * (1 - target)) * loss
+def exp_log_loss(pred, target, wdice=0.8, wcross=0.2, gamma=0.3, reduction="mean"):
+    """https://arxiv.org/pdf/1809.00076.pdf"""
+    l_dice = log_dice_loss(pred, target, reduction=None) ** gamma
+    l_cross = bce_loss(pred, target, reduction=None) ** gamma
 
-    loss_per_sample = loss.mean(dim=(1, 2, 3))
+    loss_per_image = wdice * l_dice + wcross * l_cross
     if reduction == "mean":
-        return loss_per_sample.mean()
+        return loss_per_image.mean()
     if reduction == "sum":
-        return loss_per_sample.sum()
-    return loss_per_sample
+        return loss_per_image.sum()
+    return loss_per_image
+
+
+def tversky_loss(pred, target, alpha=0.5, beta=0.5, smooth=1.0, reduction="mean"):
+    """https://arxiv.org/pdf/1706.05721.pdf
+    α and β control the magnitude of penalties for FPs and FNs, respectively
+    """
+    pred = torch.sigmoid(pred)
+
+    img_flat = pred.view(pred.size(0), -1)
+    mask_flat = target.view(target.size(0), -1)
+
+    intersection = (img_flat * mask_flat).sum(dim=-1)
+    fps = (img_flat * (1 - mask_flat)).sum(dim=-1)
+    fns = ((1 - img_flat) * mask_flat).sum(dim=-1)
+
+    denominator = intersection + alpha * fps + beta * fns
+    tversky_per_image = (intersection + smooth) / (denominator + smooth)
+
+    loss_per_image = 1.0 - tversky_per_image
+    if reduction == "mean":
+        return loss_per_image.mean()
+    if reduction == "sum":
+        return loss_per_image.sum()
+    return loss_per_image
+
+
+def focal_tversky_loss(pred, target, gamma=4.0 / 3, reduction="mean"):
+    """https://arxiv.org/pdf/1810.07842.pdf"""
+    loss_per_image = tversky_loss(pred, target, reduction=None) ** (1.0 / gamma)
+    if reduction == "mean":
+        return loss_per_image.mean()
+    if reduction == "sum":
+        return loss_per_image.sum()
+    return loss_per_image
 
 
 if __name__ == "__main__":
 
     def main():
-        pred = torch.zeros((3, 1, 5, 5))
+        pred = torch.zeros((3, 1, 5, 5)) - 100
         target = torch.zeros_like(pred)
 
-        pred[0, 0, 0, 0] = 10
+        pred[0, 0, 0, 0] = 100
         target[0, 0, 0, 0] = 1
         pred[1, 0, 0, 0] = 1
         target[1, 0, 0, 1] = 1
-        pred[2, 0, 0, 0] = -10
+        pred[2, 0, 0, 0] = -100
         target[2, 0, 0, 0] = 0
 
-        print(bce_loss(pred, target, reduction="dd"))
-        print(bce_loss(pred, target, reduction="sum"))
-        print(bce_loss(pred, target, reduction="mean"))
+        print(tversky_loss(pred, target, reduction="dd"))
+        print(tversky_loss(pred, target, reduction="sum"))
+        print(tversky_loss(pred, target, reduction="mean"))
+        print(focal_tversky_loss(pred, target, reduction="dd"))
+        print(focal_tversky_loss(pred, target, reduction="sum"))
+        print(focal_tversky_loss(pred, target, reduction="mean"))
 
     main()

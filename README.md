@@ -30,10 +30,11 @@ The results should be submitted as a csv file which contains 6 columns and 336 r
 
 ## Score updates
 
-| Date  | Model                    | LB score<br>Mean abs difference (mm) ± std | Rank    | Solution                                                 | weight_name                                                |
-| ----- | ------------------------ | ------------------------------------------ | ------- | -------------------------------------------------------- | ---------------------------------------------------------- |
-| 21/07 | First commit             | x                                          | x       |                                                          | x                                                          |
-| 25/07 | UNet<br>Batchnorm        | 5.99 ± 11.26                               | 554/848 | SGD<br>5 epochs<br>no lr scheduling<br>dice loss         | UNet1_loss=0.63_SGD_ep=5_(216, 320)                        |
-| 26/07 | UNet<br>Batchnorm        | 4.26 ± 7.58                                | 511/850 | SGD<br>25 epochs<br>multistepLR<br>dice loss             | UNet1_dice=0.4405_SGD_ep=29_(216, 320)_wd=0_dice_loss      |
-| 27/07 | UNet<br>Batchnorm        | 3.97 ± 6.97                                | 503/851 | SGD<br>35 epochs<br>multistepLR<br>dice loss<br>data aug | UNet1_dice=0.438_SGD_ep=23_(216, 320)_wd=0_dice_loss       |
-| 27/07 | DilatedUNet<br>Batchnorm | 2.65 ± 6.08                                | 402/852 | SGD<br>35 epochs<br>multistepLR<br>dice loss<br>data aug | DilatedUNet_dice=0.477_SGD_ep=28_(216, 320)_wd=0_dice_loss |
+| Date  | Model                    | LB score<br>Mean abs difference (mm) ± std | Rank    | Solution                                                        | weight_name                                                    |
+| ----- | ------------------------ | ------------------------------------------ | ------- | --------------------------------------------------------------- | -------------------------------------------------------------- |
+| 21/07 | First commit             | x                                          | x       |                                                                 | x                                                              |
+| 25/07 | UNet<br>Batchnorm        | 5.99 ± 11.26                               | 554/848 | SGD<br>5 epochs<br>no lr scheduling<br>dice loss                | UNet1_loss=0.63_SGD_ep=5_(216, 320)                            |
+| 26/07 | UNet<br>Batchnorm        | 4.26 ± 7.58                                | 511/850 | SGD<br>25 epochs<br>multistepLR<br>dice loss                    | UNet1_dice=0.4405_SGD_ep=29_(216, 320)_wd=0_dice_loss          |
+| 27/07 | UNet<br>Batchnorm        | 3.97 ± 6.97                                | 503/851 | SGD<br>35 epochs<br>multistepLR<br>dice loss<br>data aug        | UNet1_dice=0.438_SGD_ep=23_(216, 320)_wd=0_dice_loss           |
+| 27/07 | DilatedUNet<br>Batchnorm | 2.65 ± 6.08                                | 402/852 | SGD<br>35 epochs<br>multistepLR<br>dice loss<br>data aug        | DilatedUNet_dice=0.477_SGD_ep=28_(216, 320)_wd=0_dice_loss     |
+| 27/07 | DilatedUNet<br>Batchnorm | 2.42 ± 4.63                                | 373/853 | SGD<br>35 epochs<br>multistepLR<br>dice + WBCE loss<br>data aug | DilatedUNet_dice=0.477_SGD_ep=24_(216, 320)_wd=0_bce_dice_loss |

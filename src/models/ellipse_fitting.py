@@ -5,7 +5,7 @@ import cv2
 
 def opencv_fitEllipse(binary_mask, method="Direct"):
 
-    points = np.argwhere(binary_mask > 0.5)
+    points = np.argwhere(binary_mask > 0.5)  # TODO: tune threshold
 
     if method == "AMS":
         (xx, yy), (MA, ma), angle = cv2.fitEllipseAMS(points)
