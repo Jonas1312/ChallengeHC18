@@ -23,7 +23,7 @@ def dice_coeff(pred, target, smooth=0.0, reduction="mean"):
 
 
 def dice_loss(pred, target, smooth=1.0, reduction="mean"):
-    dice_per_image = dice_coeff(pred, target, smooth=smooth, reduction=None)
+    dice_per_image = dice_coeff(pred, target, smooth=smooth, reduction="none")
     loss_per_image = 1.0 - dice_per_image
     if reduction == "mean":
         return loss_per_image.mean()
@@ -33,7 +33,9 @@ def dice_loss(pred, target, smooth=1.0, reduction="mean"):
 
 
 def log_dice_loss(pred, target, smooth=1.0, reduction="mean"):
-    loss_per_image = -torch.log(dice_coeff(pred, target, smooth=smooth, reduction=None))
+    loss_per_image = -torch.log(
+        dice_coeff(pred, target, smooth=smooth, reduction="none")
+    )
     if reduction == "mean":
         return loss_per_image.mean()
     if reduction == "sum":
@@ -44,7 +46,7 @@ def log_dice_loss(pred, target, smooth=1.0, reduction="mean"):
 def bce_loss(pred, target, reduction="mean"):
     """Balanced binary cross entropy"""
     beta = (1 - target).sum() / target.numel()
-    loss = F.binary_cross_entropy_with_logits(pred, target, reduction=None)
+    loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
     loss = (beta.sqrt() * target + (1 - beta).sqrt() * (1 - target)) * loss
 
     loss_per_image = loss.mean(dim=(1, 2, 3))
@@ -58,7 +60,7 @@ def bce_loss(pred, target, reduction="mean"):
 def focal_loss(pred, target, gamma=2, reduction="mean"):
     y_hat = torch.sigmoid(pred)
 
-    loss = F.binary_cross_entropy_with_logits(pred, target, reduction=None)
+    loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
     loss = ((1 - y_hat) ** gamma * target + (y_hat) ** gamma * (1 - target)) * loss
 
     loss_per_image = loss.mean(dim=(1, 2, 3))
@@ -77,8 +79,8 @@ def bce_dice_loss(pred, target, reduction="mean"):
 
 def exp_log_loss(pred, target, wdice=0.8, wcross=0.2, gamma=0.3, reduction="mean"):
     """https://arxiv.org/pdf/1809.00076.pdf"""
-    l_dice = log_dice_loss(pred, target, reduction=None) ** gamma
-    l_cross = bce_loss(pred, target, reduction=None) ** gamma
+    l_dice = log_dice_loss(pred, target, reduction="none") ** gamma
+    l_cross = bce_loss(pred, target, reduction="none") ** gamma
 
     loss_per_image = wdice * l_dice + wcross * l_cross
     if reduction == "mean":
@@ -91,6 +93,9 @@ def exp_log_loss(pred, target, wdice=0.8, wcross=0.2, gamma=0.3, reduction="mean
 def tversky_loss(pred, target, alpha=0.5, beta=0.5, smooth=1.0, reduction="mean"):
     """https://arxiv.org/pdf/1706.05721.pdf
     α and β control the magnitude of penalties for FPs and FNs, respectively
+    α = β = 0.5 => dice coeff
+    α = β = 1   => tanimoto coeff
+    α + β = 1   => F beta coeff
     """
     pred = torch.sigmoid(pred)
 
@@ -114,7 +119,7 @@ def tversky_loss(pred, target, alpha=0.5, beta=0.5, smooth=1.0, reduction="mean"
 
 def focal_tversky_loss(pred, target, gamma=4.0 / 3, reduction="mean"):
     """https://arxiv.org/pdf/1810.07842.pdf"""
-    loss_per_image = tversky_loss(pred, target, reduction=None) ** (1.0 / gamma)
+    loss_per_image = tversky_loss(pred, target, reduction="none") ** (1.0 / gamma)
     if reduction == "mean":
         return loss_per_image.mean()
     if reduction == "sum":

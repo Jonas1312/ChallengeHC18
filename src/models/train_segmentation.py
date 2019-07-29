@@ -2,10 +2,11 @@ import os
 
 import numpy as np
 import torch
+from torch import nn
 
-from architectures.unet1 import UNet1 as Model
+from architectures.DilatedUNet import DilatedUNet as Model
 from dataset import SegmentationDataset
-from losses import dice_coeff, focal_loss
+from losses import bce_dice_loss, dice_coeff
 
 
 def train(model, device, train_loader, optimizer, epoch, scheduler=None):
@@ -19,7 +20,7 @@ def train(model, device, train_loader, optimizer, epoch, scheduler=None):
 
         output = model(data)
 
-        loss = focal_loss(output, target, reduction="sum")
+        loss = bce_dice_loss(output, target, reduction="sum")
         epoch_loss += loss.item()
         loss = loss / len(data)
 
@@ -57,7 +58,7 @@ def validate(model, device, test_loader):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += focal_loss(output, target, reduction="sum").item()
+            test_loss += bce_dice_loss(output, target, reduction="sum").item()
             test_dice += dice_coeff(output, target, reduction="sum").item()
 
     test_loss /= len(test_loader.dataset)
@@ -77,7 +78,7 @@ def checkpoint(model, test_dice, optimizer, epoch, input_size, weight_decay, inf
         infos,
     )
     path = os.path.join("../../models/", file_name)
-    if test_dice > 0.43 and not os.path.isfile(path):
+    if test_dice > 0.46 and not os.path.isfile(path):
         torch.save(model.state_dict(), path)
         print("Saved: ", file_name)
 
@@ -88,7 +89,7 @@ def main():
 
     # Hyperparams
     batch_size = 16
-    epochs = 60
+    epochs = 40
     input_size = (216, 320)
     weight_decay = 0
     print(f"Batch size: {batch_size}, input size: {input_size}, wd: {weight_decay}")
@@ -142,12 +143,21 @@ def main():
     model = Model().to(device)
     print(Model.__name__)
 
+    # he initialization
+    for m in model.modules():
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.kaiming_normal_(m.weight, mode="fan_in")
+        elif isinstance(m, nn.BatchNorm2d):
+            nn.init.constant_(m.weight, 1)
+            nn.init.constant_(m.bias, 0)
+
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-1, momentum=0.9)
     print("Optimizer: ", optimizer.__class__.__name__)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=[10, 15, 20, 25, 30], gamma=0.1
-    )
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, milestones=[10, 15, 20, 25, 30, 35], gamma=0.1
+    # )
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.77)
 
     train_loss_history = list()
     test_loss_history = list()
@@ -173,7 +183,7 @@ def main():
                 epoch,
                 input_size,
                 weight_decay,
-                infos="dice_loss",
+                infos="bce_dice_loss",
             )
 
         train_loss_history.append(train_loss)
