@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from architectures.unet1 import UNet1 as Model
+from architectures.DilatedUNet import DilatedUNet as Model
 from dataset import SegmentationDataset
 from ellipse_fitting import opencv_fitEllipse
 
@@ -13,7 +13,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    weights_name = "UNet1_dice=0.4405_SGD_ep=29_(216, 320)_wd=0_dice_loss.pth"
+    weights_name = "DilatedUNet_dice=0.477_SGD_ep=24_(216, 320)_wd=0_bce_dice_loss.pth"
 
     input_size = (216, 320)
 
@@ -23,7 +23,7 @@ def main():
     print("Test set size : ", len(test_set))
 
     test_loader = torch.utils.data.DataLoader(
-        dataset=test_set, batch_size=32, shuffle=False, pin_memory=True
+        dataset=test_set, batch_size=1, shuffle=False, pin_memory=True
     )
 
     model = Model().to(device)
@@ -45,6 +45,8 @@ def main():
 
             data = data.to(device)
             output = model(data)
+
+            output = torch.sigmoid(output)
 
             for batch_index in range(output.size(0)):
                 mask = output.cpu().numpy()[batch_index, 0, :, :]
