@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from architectures.DilatedUNet import DilatedUNet as Model
+from architectures.unet_1 import NestedUNet as Model
 from dataset import SegmentationDataset
 from losses import bce_dice_loss, dice_coeff
 
@@ -59,7 +59,7 @@ def validate(model, device, test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += bce_dice_loss(output, target, reduction="sum").item()
-            test_dice += dice_coeff(output, target, reduction="sum").item()
+            test_dice += dice_coeff(output, target, hard=True, reduction="sum").item()
 
     test_loss /= len(test_loader.dataset)
     test_dice /= len(test_loader.dataset)
@@ -78,7 +78,7 @@ def checkpoint(model, test_dice, optimizer, epoch, input_size, weight_decay, inf
         infos,
     )
     path = os.path.join("../../models/", file_name)
-    if test_dice > 0.46 and not os.path.isfile(path):
+    if test_dice > 0.47 and not os.path.isfile(path):
         torch.save(model.state_dict(), path)
         print("Saved: ", file_name)
 
@@ -88,10 +88,10 @@ def main():
     print(device)
 
     # Hyperparams
-    batch_size = 16
+    batch_size = 8
     epochs = 40
     input_size = (216, 320)
-    weight_decay = 0
+    weight_decay = 1e-4
     print(f"Batch size: {batch_size}, input size: {input_size}, wd: {weight_decay}")
 
     # Create datasets
@@ -151,13 +151,14 @@ def main():
             nn.init.constant_(m.weight, 1)
             nn.init.constant_(m.bias, 0)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-1, momentum=0.9)
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=1e-1, momentum=0.9, weight_decay=weight_decay
+    )
     print("Optimizer: ", optimizer.__class__.__name__)
 
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(
-    #     optimizer, milestones=[10, 15, 20, 25, 30, 35], gamma=0.1
-    # )
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.77)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[8, 14, 20, 25, 30, 35], gamma=0.1
+    )
 
     train_loss_history = list()
     test_loss_history = list()

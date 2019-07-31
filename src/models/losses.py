@@ -4,11 +4,14 @@ from torch.nn import functional as F
 EPS = 1e-7
 
 
-def dice_coeff(pred, target, smooth=0.0, reduction="mean"):
+def dice_coeff(pred, target, smooth=0.0, hard=False, reduction="mean"):
     pred = torch.sigmoid(pred)
 
     img_flat = pred.view(pred.size(0), -1)
     mask_flat = target.view(target.size(0), -1)
+
+    if hard:
+        img_flat = torch.round(img_flat)
 
     intersection = (img_flat * mask_flat).sum(dim=-1)
 
@@ -90,7 +93,7 @@ def exp_log_loss(pred, target, wdice=0.8, wcross=0.2, gamma=0.3, reduction="mean
     return loss_per_image
 
 
-def tversky_loss(pred, target, alpha=0.5, beta=0.5, smooth=1.0, reduction="mean"):
+def tversky_loss(pred, target, alpha=0.3, beta=0.7, smooth=1.0, reduction="mean"):
     """https://arxiv.org/pdf/1706.05721.pdf
     α and β control the magnitude of penalties for FPs and FNs, respectively
     α = β = 0.5 => dice coeff
@@ -135,16 +138,12 @@ if __name__ == "__main__":
 
         pred[0, 0, 0, 0] = 100
         target[0, 0, 0, 0] = 1
-        pred[1, 0, 0, 0] = 1
-        target[1, 0, 0, 1] = 1
-        pred[2, 0, 0, 0] = -100
-        target[2, 0, 0, 0] = 0
+        pred[1, 0, 0, 0] = 100  # fp
+        target[1, 0, 0, 0] = 0
+        pred[2, 0, 0, 0] = -100  # fn
+        target[2, 0, 0, 0] = 1
 
         print(tversky_loss(pred, target, reduction="dd"))
-        print(tversky_loss(pred, target, reduction="sum"))
-        print(tversky_loss(pred, target, reduction="mean"))
-        print(focal_tversky_loss(pred, target, reduction="dd"))
-        print(focal_tversky_loss(pred, target, reduction="sum"))
-        print(focal_tversky_loss(pred, target, reduction="mean"))
+        print(dice_loss(pred, target, reduction="dd"))
 
     main()

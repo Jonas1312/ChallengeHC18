@@ -4,7 +4,7 @@ import cv2
 
 
 def opencv_fitEllipse(binary_mask, method="Direct"):
-    assert binary_mask.min() > 0.0 and binary_mask.max() < 1.0
+    assert binary_mask.min() >= 0.0 and binary_mask.max() <= 1.0
     points = np.argwhere(binary_mask > 0.5)  # TODO: tune threshold
 
     if method == "AMS":

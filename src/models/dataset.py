@@ -90,7 +90,7 @@ class SegmentationDataset(data.Dataset):
             mask = transforms.functional.to_grayscale(mask)
 
         # Resize
-        resize = transforms.Resize(size=self.input_size)
+        resize = transforms.Resize(size=self.input_size, interpolation=Image.BILINEAR)
         image = resize(image)
         if self.train_mode:
             mask = resize(mask)
@@ -100,7 +100,7 @@ class SegmentationDataset(data.Dataset):
             random_aff = transforms.RandomAffine(
                 degrees=0,
                 translate=(0.05, 0.05),
-                scale=(0.95, 1.05),
+                scale=(0.9, 1.1),
                 resample=3,
                 fillcolor=0,
             )
