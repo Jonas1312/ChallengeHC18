@@ -3,10 +3,11 @@ import os
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 
-from architectures.unet_1 import NestedUNet as Model
+from architectures.custom_unet import U_Net as Model
 from dataset import SegmentationDataset
-from losses import bce_dice_loss, dice_coeff
+from losses import tversky_loss, tversky_coeff
 
 
 def train(model, device, train_loader, optimizer, epoch, scheduler=None):
@@ -20,7 +21,22 @@ def train(model, device, train_loader, optimizer, epoch, scheduler=None):
 
         output = model(data)
 
-        loss = bce_dice_loss(output, target, reduction="sum")
+        if isinstance(output, list):
+            loss = tversky_loss(output[0], target, reduction="sum")
+            for i in range(1, len(output)):
+                target_resized = F.interpolate(
+                    target, scale_factor=1 / 2 ** i, mode="bilinear", align_corners=True
+                )
+                target_resized = torch.where(
+                    target_resized > 0.1,
+                    torch.tensor(1.0, device=device),
+                    torch.tensor(0.0, device=device),
+                )
+                loss = loss + tversky_loss(output[i], target_resized, reduction="sum")
+            loss = loss / len(output)
+        else:
+            loss = tversky_loss(output, target, reduction="sum")
+
         epoch_loss += loss.item()
         loss = loss / len(data)
 
@@ -58,8 +74,12 @@ def validate(model, device, test_loader):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += bce_dice_loss(output, target, reduction="sum").item()
-            test_dice += dice_coeff(output, target, hard=True, reduction="sum").item()
+            if isinstance(output, list):
+                output = output[0]
+            test_loss += tversky_loss(output, target, reduction="sum").item()
+            test_dice += tversky_coeff(
+                output, target, hard=True, reduction="sum"
+            ).item()
 
     test_loss /= len(test_loader.dataset)
     test_dice /= len(test_loader.dataset)
@@ -88,7 +108,7 @@ def main():
     print(device)
 
     # Hyperparams
-    batch_size = 8
+    batch_size = 16
     epochs = 40
     input_size = (216, 320)
     weight_decay = 1e-4
@@ -157,7 +177,7 @@ def main():
     print("Optimizer: ", optimizer.__class__.__name__)
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=[8, 14, 20, 25, 30, 35], gamma=0.1
+        optimizer, milestones=[8, 14, 19, 25, 30, 35], gamma=0.1
     )
 
     train_loss_history = list()
@@ -184,7 +204,7 @@ def main():
                 epoch,
                 input_size,
                 weight_decay,
-                infos="bce_dice_loss",
+                infos="tversky_loss",
             )
 
         train_loss_history.append(train_loss)
