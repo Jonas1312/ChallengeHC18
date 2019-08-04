@@ -40,3 +40,42 @@ The results should be submitted as a csv file which contains 6 columns and 336 r
 | 27/07 | DilatedUNet<br>Batchnorm                    | 2.42 ± 4.63                                | 373/853 (43%) | SGD<br>35 epochs<br>multistepLR<br>dice + WBCE loss<br>data aug                      | DilatedUNet_dice=0.477_SGD_ep=24_(216, 320)_wd=0_bce_dice_loss      |
 | 29/07 | DilatedUNet<br>Batchnorm                    | 2.28 ± 3.53                                | 351/853 (41%) | SGD<br>35 epochs<br>multistepLR<br>dice + WBCE loss<br>more data aug<br>weight decay | DilatedUNet_dice=0.478_SGD_ep=28_(216, 320)_wd=0.0001_bce_dice_loss |
 | 01/08 | Custom UNet<br>Dilation<br>Deep supervision | 1.92 ± 2.33                                | 73/864 (8%)   | SGD<br>40 epochs<br>multistepLR<br>dice + WBCE loss<br>data aug<br>weight decay      | U_Net_dice=0.476_SGD_ep=30_(216, 320)_wd=0.0001_bce_dice_loss       |
+
+## Final solution
+
+![Example](./figures/example.jpg)
+
+- Data preprocessing:
+  - train/test/valid (80%/15%/5%)
+
+- Architecture: unet + dilation in bottleneck + deep supervision
+
+- Training:
+  - data aug: h/v flip, scale, shift
+  - resize to (216, 320)
+  - random weights
+  - SGD
+  - LR scheduler : MultiStepLR
+  - 1e-4 weight decay
+  - Loss : BCE + DICE
+
+## What didn't work
+
+- Focal loss
+- Tversky loss
+- Adam/AdamW (converges fast but not as good as SGD)
+- Nested UNet (UNet++)
+- Attention Unet
+- Multi input
+
+## Things I would have liked to try
+
+- TTA
+- Other architectures (maskrcnn, deeplabv3+, etc.)
+- different input sizes
+- weights from pretrained autoencoder
+- other algorithms for ellipse fitting
+
+## Fails
+
+![Example](./figures/fails.jpg)
