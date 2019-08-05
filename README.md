@@ -51,6 +51,8 @@ The results should be submitted as a csv file which contains 6 columns and 336 r
 
 - Architecture: unet + dilation in bottleneck + deep supervision
 
+- Ellipse fitting: https://ieeexplore.ieee.org/document/546029/
+
 - Training:
   - data aug: h/v flip, scale, shift
   - resize to (216, 320)
