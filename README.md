@@ -8,7 +8,7 @@ During pregnancy, ultrasound imaging is used to measure fetal biometrics. One of
 
 The HC can be used to estimate the gestational age and monitor growth of the fetus. The HC is measured in a specific cross section of the fetal head, which is called the standard plane.
 
-<img src="https://grand-challenge-public-prod.s3.amazonaws.com/b/265/bannerV3_V5OH10E.x15.jpeg" alt="Illustration" width="800"/>
+<img src="./figures/bannerV3_V5OH10E.x15.jpeg" alt="Illustration" width="800"/>
 
  This challenge makes it possible to compare developed algorithms for automated measurement of fetal head circumference in 2D ultrasound images.
 
@@ -26,7 +26,7 @@ The results should be submitted as a csv file which contains 6 columns and 336 r
 
 **filename,center_x_mm,center_y_mm,semi_axes_a_mm,semi_axes_b_mm,angle_rad**
 
-<img src="https://grand-challenge-public-prod.s3.amazonaws.com/f/challenge/265/5dce7aa7-d2fe-4f59-a838-45dd267840be/GrandChallangeValues_90xwKFs.png" alt="Illustration" width="600"/>
+<img src="./figures/GrandChallangeValues_90xwKFs.png" alt="Illustration" width="600"/>
 
 ## Score updates
 
